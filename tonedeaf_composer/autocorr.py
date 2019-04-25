@@ -63,6 +63,14 @@ def freq_from_autocorr(sig, fs):
     return fs / px
 
 
+def plot(data: np.array, title='') -> None:
+    import pylab
+    pylab.plot(np.linspace(0, 1, len(data)), data)
+    pylab.title(title)
+    # pylab.axis([0, 0.4, 15000, -15000])
+    pylab.show()
+    pass
+
 print('sampling at', SAMPLE_RATE, 'Hz with max resolution of', FREQ_STEP, 'Hz')
 print()
 
