@@ -122,19 +122,21 @@ class NoteReader:
 # Allocate space to run an FFT.
 buf = np.zeros(SAMPLES_PER_FFT, dtype=np.float32)
 
-# Initialize audio
-num_frames = 0
 reader = NoteReader()
-stream = pyaudio.PyAudio().open(format=pyaudio.paInt16,
-                                channels=1,
-                                rate=SAMPLE_RATE,
-                                input=True,
-                                frames_per_buffer=FRAME_SIZE)
-stream.start_stream()
-while stream.is_active():
+
+microphone = True
+if microphone:
+    frame_provider = MicrophoneFrameProvider(SAMPLE_RATE, SAMPLES_PER_FRAME)
+else:
+    filename = '/Users/philliptennen/PycharmProjects/tonedeaf_composer/c-major-scale-1-octave-open-position_mono.wav'
+    frame_provider = WavFileFrameProvider(filename, SAMPLES_PER_FRAME)
+
+
+num_frames = 0
+while frame_provider.has_frames():
     # Shift the buffer down and new data in
-    buf[:-FRAME_SIZE] = buf[FRAME_SIZE:]
-    buf[-FRAME_SIZE:] = np.fromstring(stream.read(FRAME_SIZE, exception_on_overflow=False), np.int16)
+    buf[:-SAMPLES_PER_FRAME] = buf[SAMPLES_PER_FRAME:]
+    buf[-SAMPLES_PER_FRAME:] = audio_frame
     num_frames += 1
     # Do nothing until buffer fills for the first time
     if num_frames < FRAMES_PER_FFT:
