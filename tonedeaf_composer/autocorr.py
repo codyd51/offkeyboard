@@ -1,13 +1,94 @@
 import time
+import asyncio
+import keyboard
 import collections
+from typing import List
 
 import numpy as np
 from numpy import argmax, diff
 from matplotlib.mlab import find
 from scipy.signal import butter, lfilter, fftconvolve
 
-from tonedeaf_composer.parabolic import parabolic
-from tonedeaf_composer.frame_provider import WavFileFrameProvider, MicrophoneFrameProvider
+from parabolic import parabolic
+from frame_provider import WavFileFrameProvider, MicrophoneFrameProvider
+
+
+class Keymap:
+    def __init__(self, notes: List[str], keys: List[str]):
+        self.keymap = dict(zip(notes, keys))
+
+    def key_for_note(self, note: str):
+        if note not in self.keymap:
+            return None
+        return self.keymap[note]
+
+
+class Keymap1(Keymap):
+    def __init__(self):
+        notes = [
+            'E2', 'F2', 'F#2', 'G2', 'G#2',
+            'A2', 'A#2', 'B2', 'C3', 'C#3',
+            'D3', 'D#3', 'E3', 'F3', 'F#3',
+            'G3', 'G#3', 'A3', 'A#3', 'B3', 'C4', 'C#4', 'D4', 'D#4', 'E4', 'F4', 'F#4', 'G4'
+        ]
+        keys = [
+            'E', 'T', 'A', 'O', 'I',
+            'N', 'S', 'R', 'H', 'D',
+            'L', 'U', 'C', 'M', 'F',
+            ' ', '\n', '.', ',', 'Y', 'W', 'G', 'P', 'B', 'V', 'K', 'X', 'Q'
+        ]
+        super().__init__(notes, keys)
+
+
+class Keymap2(Keymap):
+    def __init__(self):
+        notes = [
+            'E2', 'F2', 'F#2', 'G2', 'G#2',
+            'A2', 'A#2', 'B2', 'C3', 'C#3',
+            'D3', 'D#3', 'E3', 'F3', 'F#3',
+            'G3', 'G#3', 'A3', 'A#3', 'B3', 'C4', 'C#4', 'D4', 'D#4', 'E4', 'F4', 'F#4', 'G4'
+        ]
+        keys = [
+            ###--|1|--|2|--|3|--|4|
+            'A', 'B', 'P', ' ', '\n', 'G', 'W', 'V', 'I', 'X', 'Q', '.', ','
+            'O', 'U', 'C', 'M', 'F',
+            'N', 'S', 'R', 'K', 'D',
+            'E', 'T', 'Y', 'L', 'H',
+            #                                   Usable to here
+        ]
+        keys = [
+            ###--|1|--|2|--|3|--|4|
+            'E', 'T', 'Y', 'L', 'H',
+            'N', 'S', 'R', 'K', 'D',
+            'O', 'U', 'E', 'M', 'F',
+            'A', 'B', 'P', ' ', '\n', 'G', 'W', 'V', 'I', 'X', 'Q', '.', ','
+            #                                   Usable to here
+        ]
+        # keyboards for sale
+
+
+        keys = [x.lower() for x in keys]
+        super().__init__(notes, keys)
+    pass
+
+
+class MinecraftMap(Keymap):
+    def __init__(self):
+        notes = [
+            'E2', 'F2', 'F#2', 'G2', 'G#2',
+            'A2', 'A#2', 'B2', 'C3', 'C#3',
+            'D3', 'D#3', 'E3', 'F3', 'F#3',
+            'G3', 'G#3', 'A3', 'A#3', 'B3', 'Cd', 'C#4', 'D4', 'D#4', 'E4', 'F4', 'F#4', 'G4'
+        ]
+        keys = [
+            ###--|1|--|2|--|3|--|4|
+            ' ', 'left', 'down', 'up', 'right',
+            'e', 'S', 'R', 'K', 'D',
+            'esc', 'U', 'E', 'M', 'F',
+            'A', 'B', 'P', ' ', '\n', 'G', 'W', 'V', 'I', 'X', 'Q', '.', ','
+            #                                   Usable to here
+        ]
+        super().__init__(notes, keys)
 
 
 NOTE_MIN = 40        # E2
@@ -15,7 +96,7 @@ NOTE_MAX = 64        # E4
 
 SAMPLE_RATE = 22050         # sampling frequency in Hz
 FRAMES_PER_FFT = 16         # run FFT over how many frames?
-SAMPLES_PER_FRAME = 2048    # samples per frame
+SAMPLES_PER_FRAME = 1024    # samples per frame
 
 # Derived quantities from constants above. Note that as
 # SAMPLES_PER_FFT goes up, the frequency step size decreases (sof
@@ -96,53 +177,65 @@ print()
 
 d = collections.deque(maxlen=10)
 
+from threading import Timer
+
+
+def release_key(*args):
+    key = ''.join(args)
+    print(f'release_key {key}')
+    keyboard.release(key)
+
 
 class NoteReader:
     def __init__(self):
-        # Only register a note if we hear it > 5 times in a row
-        self.ringbuf_size = 20
+        self.ringbuf_size = 10
         self.last_notes = collections.deque(maxlen=self.ringbuf_size)
-        # Incur a delay before we allow more notes to be processed
-        self.register_delay = 0.0
-        self.last_registered_note_time = 0
+        self.last_detected_note = None
+        self.keymap = MinecraftMap()
 
     def process_note(self, note: str):
-        if time.time() - self.register_delay < self.last_registered_note_time:
-            # skip note
-            return
         self.last_notes.append(note)
         # should we register this note?
-        if self.last_notes.count(note) > self.ringbuf_size*0.75:
-            self.register_note(note)
+        # If most of the notes in the ringbuffer are the same note, and this note is different from the last detected
+        # note, do a state transition
+        key = self.keymap.key_for_note(note)
+        if note == 'silence':
+            if self.last_detected_note and self.last_detected_note != 'silence':
+                key = self.keymap.key_for_note(self.last_detected_note)
+                if not key:
+                    return
+                print(f'detected silence, removing {key}')
+                # release_key(self.last_detected_note)
+                keyboard.release(key)
+            self.last_detected_note = 'silence'
+            return
+
+        self.last_detected_note = note
+
+        if key in ['left', 'down', 'up', 'right', ' ']:
+            print(f'{note}\t({key})')
+
+            keyboard.press(key)
+            # r = Timer(0.5, release_key, str(key))
+            # r.start()
+        else:
+            if self.last_notes.count(note) > 5 and note != self.last_detected_note:
+                self.register_note(note)
+                # fill the entire buffer with whatever we just registered
+                for _ in range(self.ringbuf_size):
+                    self.last_notes.append(note)
 
     def register_note(self, note: str):
-        self.last_registered_note_time = time.time()
+        self.last_detected_note = note
 
-        notes = [
-            'E2', 'F2', 'F#2', 'G2', 'G#2',
-            'A2', 'A#2', 'B2', 'C3', 'C#3',
-            'D3', 'D#3', 'E3', 'F3', 'F#3',
-            'G3', 'G#3', 'A3', 'A#3', 'B3', 'C4', 'C#4', 'D4', 'D#4', 'E4', 'F4', 'F#4', 'G4'
-        ]
-        keys = [
-            'E', 'T', 'A', 'O', 'I',
-            'N', 'S', 'R', 'H', 'D',
-            'L', 'U', 'C', 'M', 'F',
-            ' ', '\n', '.', ',', 'Y', 'W', 'G', 'P', 'B', 'V', 'K', 'X', 'Q'
-        ]
-        keymap = dict(zip(notes, keys))
-        from pprint import pprint
-        # pprint(keymap)
-        # print(keymap)
-
-        if note not in keymap:
+        key = self.keymap.key_for_note(note)
+        if not key:
             return
-            raise RuntimeError(f'Unknown note {note}')
 
-        # print(f'{keymap[note]} ({note})')
-        print(f'{keymap[note]}', end='')
-        import sys
-        sys.stdout.flush()
+        # print(f'{note}\t({key})')
+        print(f'{note}\t({key})')
+        # keyboard.write(key)
+        keyboard.send(key)
 
 
 # Allocate space to run an FFT.
@@ -165,20 +258,34 @@ guitar_max_freq = min(SAMPLES_PER_FFT, int(np.ceil(note_to_fftbin(NOTE_MAX+1))))
 
 while frame_provider.has_frames():
     audio_frame = frame_provider.get_frame()
-    # plot(raw_frame, title='before bandpass')
+
     # band-pass the frame to remove data outside guitar frequencies
-    audio_frame = butter_bandpass_filter(audio_frame, guitar_min_freq, guitar_max_freq, SAMPLE_RATE)
-    # plot(raw_frame, title='after bandpass')
+    # audio_frame = butter_bandpass_filter(audio_frame, guitar_min_freq, guitar_max_freq, SAMPLE_RATE)
 
     # Shift the buffer down and new data in
     buf[:-SAMPLES_PER_FRAME] = buf[SAMPLES_PER_FRAME:]
     buf[-SAMPLES_PER_FRAME:] = audio_frame
     num_frames += 1
-    # Do nothing until buffer fills for the first time
+
+    # Note when we get an audio frame which is below a volume threshold
+    volume = np.linalg.norm(audio_frame) * 10
+    # Chosen through experimentation
+    if volume < 100000:
+        # print(volume)
+        reader.process_note('silence')
+        continue
+    # print(f'volume: {volume}')
+
+    # If we don't have enough frames to run FFT, stop here
     if num_frames < FRAMES_PER_FFT:
         continue
 
     freq = freq_from_autocorr(buf, SAMPLE_RATE)
+
+    # Hotfix for when we detect a fundamental frequency which is clearly too low to be correct
+    if freq < number_to_freq(NOTE_MIN):
+        # Double it and assume this is the fundamental :}
+        freq = freq*2
 
     # Get note number and nearest note
     n = freq_to_number(freq)
@@ -187,8 +294,11 @@ while frame_provider.has_frames():
     # print('{:>3s} {:+.2f} ({:7.2f}) @ {:7.2f} Hz'.format(note_name(n0), n - n0, n, freq))
 
     note = note_name(n0)
-    print(note)
-    # reader.process_note(note)
+    if note == 'A1' or note == 'G#2':
+        #  breakpoint()
+        pass
+    # print(note)
+    reader.process_note(note)
     # plot(buf)
 
     continue
