@@ -72,6 +72,9 @@ python tonedeaf_composer/__init__.py
 As long as it is running, OffKeyboard will listen to the microphone (or whatever the active system input is), 
 identify pitches, and send key events per our spec.
 
+OffKeyboard will print some of the things it's doing as you play the bass, so keep an eye on this output if you run into
+an issue or want to verify that pitches are being detected properly.
+
 ## Configuring OffKeyboard
 
 I've tried to make it straightforward for you to play around with the common key mappings.

@@ -20,7 +20,7 @@ class NoteReader:
         """
         if not self.currently_held_key:
             return
-        print(f'release: {self.currently_held_key}')
+        print(f'Note changed. Releasing key: {self.currently_held_key}')
         keyboard.release(self.currently_held_key)
         self.currently_held_key = None
 
@@ -29,7 +29,6 @@ class NoteReader:
         """
         if key == SILENCE_NOTE:
             return
-        print(f'hold   : {key}')
         self.currently_held_key = key
         keyboard.press(key)
 
@@ -43,6 +42,7 @@ class NoteReader:
 
         # If this is a key that should be pressed until the note changes, do so
         if self.keymap.should_hold_key(key):
+            print(f'{note}.\tHolding down "{key}"')
             self.hold_key(key)
             return
 
@@ -63,5 +63,5 @@ class NoteReader:
         if not key:
             return
 
-        print(f'{note}\t({key})')
+        print(f'Detected {note}.\tPressing "{key}"')
         keyboard.send(key)
