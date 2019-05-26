@@ -1,5 +1,5 @@
 import numpy as np
-from .config import (
+from config import (
     NOTE_MIN,
     NOTE_MAX,
 )

@@ -3,9 +3,9 @@ import numpy as np
 from matplotlib.mlab import find
 from scipy.signal import butter, lfilter, fftconvolve
 
-from .parabolic import parabolic
-from .note_utils import number_to_freq
-from .config import (
+from parabolic import parabolic
+from note_utils import number_to_freq
+from config import (
     SAMPLE_RATE,
     FRAMES_PER_FFT,
     SAMPLES_PER_FRAME

@@ -3,8 +3,8 @@ from typing import Optional
 
 import keyboard
 
-from tonedeaf_composer.keymaps import MinecraftMap
-from tonedeaf_composer.note_utils import SILENCE_NOTE
+from keymaps import MinecraftMap
+from note_utils import SILENCE_NOTE
 
 
 class NoteReader:
@@ -28,6 +28,7 @@ class NoteReader:
         """Start holding down a key
         """
         if key == SILENCE_NOTE:
+        if note == SILENCE_NOTE:
             return
         self.currently_held_key = key
         keyboard.press(key)

@@ -1,21 +1,21 @@
 import numpy as np
 
-from tonedeaf_composer.config import (
+from config import (
     NOTE_MIN,
     NOTE_MAX,
     MIN_VOLUME,
     SAMPLE_RATE,
     SAMPLES_PER_FRAME,
 )
-from tonedeaf_composer.dsp import (
+from dsp import (
     FRAMES_PER_FFT,
     SAMPLES_PER_FFT,
     note_to_fftbin,
     freq_from_autocorr
 )
-from tonedeaf_composer.note_reader import NoteReader
-from tonedeaf_composer.note_utils import SILENCE_NOTE, number_to_freq, freq_to_number, note_name
-from tonedeaf_composer.frame_provider import WavFileFrameProvider, MicrophoneFrameProvider
+from note_reader import NoteReader
+from note_utils import SILENCE_NOTE, number_to_freq, freq_to_number, note_name
+from frame_provider import WavFileFrameProvider, MicrophoneFrameProvider
 
 
 # Derive the frequencies which notes on the instrument will produce

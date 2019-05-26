@@ -1,6 +1,6 @@
 from typing import List, Optional
 
-from tonedeaf_composer.config import (
+from config import (
     ESC_NOTE,
     JUMP_NOTE,
     CRAFT_NOTE,
