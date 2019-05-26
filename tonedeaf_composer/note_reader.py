@@ -24,10 +24,9 @@ class NoteReader:
         keyboard.release(self.currently_held_key)
         self.currently_held_key = None
 
-    def hold_key(self, key: str) -> None:
+    def hold_key(self, note: str, key: str) -> None:
         """Start holding down a key
         """
-        if key == SILENCE_NOTE:
         if note == SILENCE_NOTE:
             return
         self.currently_held_key = key
@@ -35,7 +34,9 @@ class NoteReader:
 
     def process_note(self, note: str):
         key = self.keymap.key_for_note(note)
-        if key == self.currently_held_key:
+        if not key:
+            print(f'unmapped note {note}')
+        if key and key == self.currently_held_key:
             return
 
         # clean up the key we were just pressing
@@ -44,7 +45,7 @@ class NoteReader:
         # If this is a key that should be pressed until the note changes, do so
         if self.keymap.should_hold_key(key):
             print(f'{note}\tHolding down "{key}"')
-            self.hold_key(key)
+            self.hold_key(note, key)
             return
 
         self.last_notes.append(note)
