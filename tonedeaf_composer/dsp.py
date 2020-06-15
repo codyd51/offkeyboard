@@ -1,6 +1,5 @@
 import pylab
 import numpy as np
-from matplotlib.mlab import find
 from scipy.signal import butter, lfilter, fftconvolve
 
 from parabolic import parabolic
@@ -17,6 +16,12 @@ from config import (
 # new sounds.
 SAMPLES_PER_FFT = SAMPLES_PER_FRAME * FRAMES_PER_FFT
 FREQ_STEP = float(SAMPLE_RATE) / SAMPLES_PER_FFT
+
+
+def find(condition):
+    # https://stackoverflow.com/questions/57100894/matplotlib-versions-3-does-not-inlclude-a-find
+    res, = np.nonzero(np.ravel(condition))
+    return res
 
 
 def freq_from_autocorr(sig, fs):
