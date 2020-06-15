@@ -6,6 +6,7 @@ key presses, key combos, or mouse movements/clicks. Check out [this tweet](https
 This software was used in the creation of these _epic_ YouTube videos:
 
 [I Played Minecraft Using ONLY A Bass](https://www.youtube.com/watch?v=35My8fssgVw)
+[I Beat Super Mario Using ONLY a Bass](https://www.youtube.com/watch?v=-umlnQfRMAk)
 
 The project works by running fundamental-frequency estimation on microphone input, and mapping these to keyboard/mouse inputs. 
 State is kept to ensure each played note is pressed only once (rather than the full note duration), to allow certain keys to be "held down" as long as the note is played,
