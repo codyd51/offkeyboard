@@ -37,20 +37,31 @@ class NoteReader:
             VirtualMouse.clear()
         self.currently_held_key = None
 
-    def hold_key(self, note: str, key: str) -> None:
+    def hold_key(self, note: str, key_or_key_list: Union[str, List]) -> None:
         """Start holding down a key
         """
         if note == SILENCE_NOTE:
             return
-        self.currently_held_key = key
-        keyboard.press(key)
+
+        if isinstance(key_or_key_list, list):
+            combo = "+".join(key_or_key_list)
+            self.currently_held_key = combo
+            # print(f'Holding key-combo {combo}')
+            keyboard.press(combo)
+        else:
+            self.currently_held_key = key_or_key_list
+            # print(f'Holding single-key {key_or_key_list}')
+            keyboard.press(key_or_key_list)
 
     def process_note(self, note: str):
-        key = self.keymap.key_for_note(note)
-        if not key:
-            print(f'unmapped note {note}')
-        if key and key == self.currently_held_key:
+        key_or_key_list = self.keymap.key_for_note(note)
+
+        if key_or_key_list is not None and key_or_key_list == self.currently_held_key:
             return
+        if isinstance(key_or_key_list, list):
+            combo = "+".join(key_or_key_list)
+            if self.currently_held_key == combo:
+                return
 
         # clean up the key we were just pressing
         self.release_held_key()
@@ -60,9 +71,9 @@ class NoteReader:
             return
 
         # If this is a key that should be pressed until the note changes, do so
-        if self.keymap.should_hold_key(key):
-            print(f'{note}\tHolding down "{key}"')
-            self.hold_key(note, key)
+        if self.keymap.should_hold_key(key_or_key_list):
+            print(f'{note}\tHolding down "{key_or_key_list}"')
+            self.hold_key(note, key_or_key_list)
             return
 
         self.last_notes.append(note)
@@ -78,8 +89,10 @@ class NoteReader:
     def quick_press_key_for_note(self, note: str):
         self.last_pressed_note = note
 
-        key = self.keymap.key_for_note(note)
-        if not key:
+        key_or_key_list = self.keymap.key_for_note(note)
+        if key_or_key_list is None:
+            return
+
         # Mouse keys are handled separately
         if key_or_key_list in MOUSE_KEYS:
             key = key_or_key_list
@@ -101,5 +114,11 @@ class NoteReader:
                 VirtualMouse.left_click()
             return
 
-        print(f'{note}\tPressing "{key}"')
-        keyboard.send(key)
+        if isinstance(key_or_key_list, list):
+            combo = "+".join(key_or_key_list)
+            print(f'{note}\tKey-combo {combo}')
+            keyboard.send(combo)
+        else:
+            key = key_or_key_list
+            print(f'{note}\tPressing "{key}"')
+            keyboard.send(key)
