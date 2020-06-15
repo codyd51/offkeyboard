@@ -16,6 +16,7 @@ from dsp import (
 from note_reader import NoteReader
 from note_utils import SILENCE_NOTE, number_to_freq, freq_to_number, note_name
 from frame_provider import WavFileFrameProvider, MicrophoneFrameProvider
+from mouse import VirtualMouse
 
 
 # Derive the frequencies which notes on the instrument will produce
@@ -80,6 +81,8 @@ class AudioProcessor:
         note = note_name(n0)
         # We've detected a note - hand it off to the note consumer
         self.note_reader.process_note(note)
+        # Let the mouse driver run any events it must do
+        VirtualMouse.run_callback()
 
 
 def main():
