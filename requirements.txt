@@ -1,6 +1,5 @@
 wave
 numpy
-pylab
 scipy
 typing
 pyaudio
